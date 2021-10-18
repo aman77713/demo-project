@@ -1,0 +1,213 @@
+################################################################################################
+First Create 4 ec2 instances
+1-Developer
+2-Jenkins
+3-Ansible
+4-Web-server
+
+
+################################################################################################
+go to github and create a repository and check add me readme
+
+create a file name index.html or you can push it from local repositiry
+in this file write just below line
+Hello Aman Rai
+
+commit new files
+
+copy the git url
+
+
+################################################################################################
+
+We need to set root password in all machine --
+passwd root
+vi /etc/ssh/sshd_config
+
+Uncomment PermitRootLogin yes
+
+and change PasswordAuthentication from No to yes
+
+then run command
+systemctl restart sshd
+
+###############################################################################################
+
+on jenkins
+###############################################################################################
+
+yum install java* -y
+    2  yum install git wget -y
+    3  wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+    4  rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+    5  yum install epel-release -y
+    6   amazon-linux-extras install epel
+    7  yum install java-11-openjdk-devel
+    8  yum install jenkins -y
+    9  systemctl start jenkins
+   10  systemctl enable jenkins
+   11  systemctl status jenkins
+   12  cat /var/lib/jenkins/secrets/initialAdminPassword
+
+###############################################################################################
+
+
+in jenkins dashboard
+###############################################################################################
+
+go to jenkins  cloud
+configure-->  Api token --> add-token
+copy the token and paste in github --> webhook --> secret
+
+
+
+add webhook  
+
+payload url
+jenkinsip:8080/github-webhook
+
+secrets
+
+
+
+go to jenkins  cloud
+configure-->  Api token --> add-token
+copy the token and paste it in secrets
+
+add webhook
+
+
+###############################################################################################
+
+
+in jenkins dashboard
+
+we need to install plugin name publish over ssh
+
+manage --> configure system --> search publish over ssh and check that plugin and install without restart but it restarted
+
+manage --> configure system
+
+add ssh server --> name   jenkins   -->  hostname jenkins-pvt-ip  --> user root --> advance  --> use password   and give root password --> chech test is success
+
+
+manage --> configure system
+
+add ssh server --> name   ansible   -->  hostname ansible-pvt-ip  --> user root --> advance  --> use password   and give root password --> chech test is success
+
+
+we have to create a job name demo-project
+with free style project
+ok
+
+in source code management 
+check git
+and paste git url
+
+build
+
+select send file or execute command over ssh
+ and 
+ssh server 
+name jenkins
+
+exec command 
+rsync -avh /var/lib/jenkins/workspace/demo-project/*.html root@ansible-server-pvt-ip:/opt/index.html
+
+
+
+post build action
+select send build artifacts over ssh
+
+source file --ansible
+
+exec command
+ansible-playbook /code/playbook.yml
+
+
+now index.html show in ansible /opt/ 
+
+###############################################################################################
+
+
+on ansible
+ yum install ansible -y
+    2  amazon-linux-extras install ansible2
+    3  vi /etc/ansible/hosts
+
+edit below webserver
+[web] #group
+172.31.41.254  #webserver pvt ip
+
+
+###############################################################################################
+
+on web-server
+yum install httpd -y
+systemctl start httpd
+systemctl enable httpd
+cd /var/www/html/
+
+
+###############################################################################################
+
+Then we make passwordless connection between Ansible and web-server ec2 instances
+on ansible
+ssh-keygen
+ssh-copy-id -i root@web-server-pvt-ip 
+ssh root@web-server-pvt-ip
+exit
+
+
+
+Similarly we do samething to set passwordless connection between jenkins and Ansible ec2 instances
+
+ssh-keygen
+ssh-copy-id -i root@ansible-pvt-ip 
+ssh root@ansible-pvt-ip
+exit
+
+###############################################################################################
+
+
+
+
+
+
+mkdir /code
+cd /code
+vi playbook.yml
+
+
+- hosts: all
+  tasks:
+     - copy:
+          src: /opt/index.html  #in this location jenkins send the index.html file
+          dest: /var/www/html
+
+
+################################################################################################
+
+on developer
+
+
+yum install httpd git -y
+systemctl start httpd
+systemctl enable httpd
+
+mkdir /repo
+cd /repo
+
+git clone https://github.com/aman77713/demo-project.git
+
+cd demo-project/
+vi index.html
+#you change the code
+git add -A
+git commit -m "first commit"
+git push origin main
+
+username amanrai617@gmail.com
+password *********
+
+################################################################################################
